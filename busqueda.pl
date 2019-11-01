@@ -20,11 +20,18 @@ agregar_vecinos([X|ListaVecinos]):-
 
 
 %Calcular para ir a la zona de detonacion 
-calcularHeuristica([[X,Y],PuntoCardinal,ListaItems,Costo,no],Valor):-
-    member([c,IdCarga],ListaItems),
-    member([d,IdDetonador,_],ListaIatems),
-    calcular_mejor_sitioDetonacion([X,Y],[Xf,Yf],ValorN).
+calcularHeuristica([[X,Y],_,ListaItems,_,no],Valor):-
+    member([c,_],ListaItems),
+    member([d,_,_],ListaItems),
+    calcular_mejor_sitioDetonacion([X,Y],ValorN),
+    Valor is ValorN.
 
-calcular_mejor_sitioDetonacion([X,Y],[Xf,Yf],Valor):-
-    forall(sitioDetonacion([Xf,Yf]),,)
+calcular_mejor_sitioDetonacion([X,Y],Valor):-
+    sitioDetonacion([Xs,Ys]),
+    forall(sitioDetonacion([Xn,Yn]),esMenorDistancia([X,Y],[Xs,Ys],[Xn,Yn],Valor)).
+
+esMenorDistancia([X,Y],[Xs,Ys],[Xn,Yn],ValorIS):-
+    ValorIS is abs(X-Xs) + abs(Y-Ys),
+    ValorIN is abs(X-Xn) + abs(Y-Yn),
+    ValorIS =< ValorIN. 
 
