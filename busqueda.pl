@@ -10,16 +10,23 @@ generar_vecinos(EstadoActual,Vecinos):-
 
 %Para la heuristica verificar que no implique un orden en dejar la carga, buscarla, buscar el detonador y usarlo.
 %Nodo=[Estado,Camino,Costo,Heuristica]    
-%calcularHeuristica(Estado):-!.
 
 agregar_vecinos([X|ListaVecinos]):-
+    not(visitados(X)),
+    asserta(visitados(X)),
     calcularHeuristica(X,Valor),
     asserta(frontera(X,Valor)),
-    asserta(visitados(X)),
-    agregar_vecinos(ListaVecinos).
+    agregar_vecinos(ListaVecinos). 
+
+obtener_minimo_frontera(MinimoEstado):-
+    frontera(A,V),
+    forall(frontera(_,V2),V=<V2),
+    MinimoEstado is A. 
 
 
-%Calcular para ir a la zona de detonacion 
+
+
+%Caso 1: el minero posee la carga, posee el detonador, solo debe ir al sitio de detonacion. 
 calcularHeuristica([[X,Y],_,ListaItems,_,no],Valor):-
     member([c,_],ListaItems),
     member([d,_,_],ListaItems),
@@ -34,4 +41,13 @@ esMenorDistancia([X,Y],[Xs,Ys],[Xn,Yn],ValorIS):-
     ValorIS is abs(X-Xs) + abs(Y-Ys),
     ValorIN is abs(X-Xn) + abs(Y-Yn),
     ValorIS =< ValorIN. 
+
+%Caso2 tengo el detonador pero no la carga, debo buscar una carga
+%calcularHeuristica([[X,Y],_,ListaItems,_,si]):-
+ %   member([d,_,_],ListaItems),
+  %  not(member([c,_],ListaItems)).
+
+
+%esMenorDistancia([X,Y],[Xs,Ys],Valor):-
+ %   Valor is abs(X-Xs) + abs(Y-Ys).
 
