@@ -44,18 +44,20 @@ caminar([[X,Y],PuntoCardinal,ListaItems,Costo,ColocacionCargaPendiente],[[Xn,Yn]
 
 %rotar(+EstadoInicial,-EstadoFinal,+Direccion):
 rotar([[X,Y],PuntoCardinal,ListaItems,Costo,ColocacionCargaPendiente],[[X,Y],Direccion,ListaItems,CostoFinal,ColocacionCargaPendiente],Direccion):-
-    PuntoCardinal \= Direccion,
     costoRotar(PuntoCardinal,Direccion,CostoNuevo),
+    PuntoCardinal \= Direccion,
     CostoFinal is Costo + CostoNuevo.
 
 %saltar(+Estado,-EstadoFinal):
 saltar([[X,Y],PuntoCardinal,ListaItems,Costo,ColocacionCargaPendiente],[[Xn,Yn],PuntoCardinal,ListaItems,CostoFinal,ColocacionCargaPendiente]):-
+    trace,
     mover_direccion_correspondiente([X,Y],[Xs,Ys],PuntoCardinal),
     estaEn([v,_,Altura],[Xs,Ys]),
     Altura<4,
     mover_direccion_correspondiente([Xs,Ys],[Xn,Yn],PuntoCardinal),
     not(estaEn([p,_,_],[Xn,Yn]);estaEn([v,_,_],[Xn,Yn]);estaEn([r,_],[Xn,Yn])),
-    costoCaminar([Xn,Yn],CostoNuevo),
+    celda([Xn,Yn],Suelo),
+    costoCaminar(Suelo,CostoNuevo),
     CostoFinal is CostoNuevo + Costo + 1. 
 
 %juntar_llave(+EstadoInicial,-EstadoFinal):
@@ -123,4 +125,11 @@ costoRotar(n,s,2).
 costoRotar(s,n,2).
 costoRotar(e,o,2).
 costoRotar(o,e,2).
-costoRotar(_,_,1).
+costoRotar(n,e,1).
+costoRotar(n,o,1).
+costoRotar(s,e,1).
+costoRotar(s,o,1).
+costoRotar(e,n,1).
+costoRotar(e,s,1).
+costoRotar(o,n,1).
+costoRotar(o,s,1).
