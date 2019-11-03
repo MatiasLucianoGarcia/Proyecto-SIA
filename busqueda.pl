@@ -1,10 +1,16 @@
 :-[operadores].
 
-:- dynamic frontera/2 , visitados/1.
+:- dynamic frontera/1.
+:- dynamic visitados/1.
 
 %generar_vecinos(+EstadoActual,-Vecinos):
-generar_vecinos(EstadoActual,Vecinos):-
-    findall([EstadoSiguente,Operacion], realizar_operacion(EstadoActual,EstadoSiguente,Operacion), Vecinos).
+generar_vecinos(Nodo,Vecinos):-
+    Nodo=[Estado,Camino,Costo,_],
+    Estado=[_,_,_,CostoEstado,_],
+    Costo is CostoEstado,
+    findall([EstadoSiguente,[Operacion|Camino],CostoEstadoNuevo], realizar_operacion(EstadoActual,EstadoSiguente,Operacion), Vecinos),
+    EstadoActual=[_,_,_,CostoEstadoNuevo,_,_].
+
 
 %buscar_plan(+EInicial,-Plan,-Destino,-Costo):
 
@@ -13,19 +19,41 @@ agregar_vecinos([]):-!.
 agregar_vecinos([X|ListaVecinos]):-
     not(visitados(X)),
     asserta(visitados(X)),
-    calcularHeuristica(X,Valor),
-    asserta(frontera(X,Valor)),
+    X=[Estado,Camino,Costo],
+    calcularHeuristica(Estado,CostoH),
+    CostoT is CostoH+Costo,
+    N=[Estado,Camino,Costo,CostoT],
+    asserta(frontera(N)),
     agregar_vecinos(ListaVecinos). 
 
-obtener_minimo_frontera(MinimoEstado):-
-    frontera(A,V),
-    forall(frontera(_,V2),V=<V2),
-    MinimoEstado is A. 
+obtener_minimo_frontera(MinimoNodo):-
+    N1 = [_,_,_,Costo1],
+    N2 = [_,_,_,Costo2],
+    frontera(N1),
+    forall(frontera(N2),Costo1=<Costo2),
+    MinimoNodo is N1. 
+
+%Caso Base aEstrella:  Saco el minimo nodo y si es meta lo agrego al camino y  
+%aEstrella(Costo):-
+ %   obtener_minimo_frontera(Estado),
+  %  esMeta(Estado),!.
+
+%aEstrella(Costo):-
+ %   obtener_minimo_frontera(Estado),
+  %  generar_vecinos(Estado,Vecinos),
+   % agregar_vecinos(Vecinos),
+    %aEstrella(Costo).     
+
+%Define si el estado es un estado meta
+esMeta(Nodo):-
+    Nodo=[Estado,_,_,_],
+    Estado=[[X,Y],_,ListaItems,_,no],
+    member([d,_,si],ListaItems),
+    sitioDetonacion([X,Y]).
 
 
 %Caso 1:Detonador = SI, CargaPendiente = NO => ir al sitio de detonacion  
 calcularHeuristica([[X,Y],_,ListaItems,_,no],Valor):-
-    member([c,_],ListaItems),
     member([d,_,_],ListaItems),
     calcular_mejor_sitioDetonacion([X,Y],ValorN),
     Valor is ValorN.
@@ -82,15 +110,16 @@ calcularHeuristica([[X,Y],_,ListaItems,_,si],Valor):-
     
 
 %Caso 6: Detonador = NO, Carga = No, ColocacionCargaPendiente = SI 
-calcularHeuristica([[X,Y],_,ListaItems,_,si],Valor):-
-    not(member([d,_,_],ListaItems)),
-    not(member([c,_],ListaItems)),
-    estaEn([c,_], [Xc,Yc]),
-    estaEn([d,_,_],[Xd,Yd]),       
-    distanciaManhattam([X,Y],[Xc,Yc],DistCarga),
-    distanciaManhattam([X,Y],[Xd,Yd],DistDetonador),
-    Valor is DistCarga + DistDetonador.
-
+%Caso A: Busco  
+%calcularHeuristica([[X,Y],_,ListaItems,_,si],Valor):-
+    %not(member([d,_,_],ListaItems)),
+    %not(member([c,_],ListaItems)),
+    %estaEn([c,_], [Xc,Yc]),
+    %estaEn([d,_,_],[Xd,Yd]),       
+    %distanciaManhattam([X,Y],[Xd,Yd],DistDetonador),
+    %distanciaManhattam([Xd,Yd],[Xc,Yc],DistDetoCarga),
+    %calcular_mejor_sitioDetonacion([Xc,Yc],DistDetoCargaDetonar),
+    %CasoA is DistDetonador + DistDetoCarga + DistDetoCargaDetonar
 
 %Calcula la distancia de manhattam desde la primer posicion a la segunda.
 %alcularDistanciaManhattam(+PosInicial,+PosDestino,-Valor):
@@ -105,5 +134,6 @@ esMenorDistancia([X,Y],[Xs,Ys],[Xn,Yn],ValorIS):-
     ValorIS is abs(X-Xs) + abs(Y-Ys),
     ValorIN is abs(X-Xn) + abs(Y-Yn),
     ValorIS =< ValorIN. 
+
 
 
