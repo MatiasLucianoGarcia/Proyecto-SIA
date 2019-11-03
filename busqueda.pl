@@ -8,9 +8,6 @@ generar_vecinos(EstadoActual,Vecinos):-
 
 %buscar_plan(+EInicial,-Plan,-Destino,-Costo):
 
-%Para la heuristica verificar que no implique un orden en dejar la carga, buscarla, buscar el detonador y usarlo.
-%Nodo=[Estado,Camino,Costo,Heuristica]    
-
 agregar_vecinos([]):-!.
 
 agregar_vecinos([X|ListaVecinos]):-
@@ -33,7 +30,7 @@ calcularHeuristica([[X,Y],_,ListaItems,_,no],Valor):-
     calcular_mejor_sitioDetonacion([X,Y],ValorN),
     Valor is ValorN.
 
-%Caso 2:Detonador = NO  - ColocacionCargaPendiente = NO
+%Caso 2:Detonador = NO  - ColocacionCargaPendiente = NO => tengo que buscar el detonador e ir al sitio de detonacion
 calcularHeuristica([[X,Y],_,ListaItems,_,no],Valor):-
     not(member([d,_,_], ListaItems)),
     estaEn([d,_,_],[Xd,Yd]),
@@ -41,7 +38,7 @@ calcularHeuristica([[X,Y],_,ListaItems,_,no],Valor):-
     calcular_mejor_sitioDetonacion([Xd,Yd],CostoIrSitDet),
     Valor is DistDetonador + CostoIrSitDet.
 
-%Caso 3: Detonador = Si, Carga = Si , ColocacionCargaPendiente = SI
+%Caso 3: Detonador = Si, Carga = Si , ColocacionCargaPendiente = SI => tengo que dejar la Carga en su ubicacion e ir al sitio de detonacion
 calcularHeuristica([[X,Y],_,ListaItems,_,si],Valor):-
     member([d,_,_],ListaItems),
     member([c,_],ListaItems),
@@ -50,7 +47,7 @@ calcularHeuristica([[X,Y],_,ListaItems,_,si],Valor):-
     calcular_mejor_sitioDetonacion([Xu,Yu],CostoIrSitDet),
     Valor is DistDejarCarga + CostoIrSitDet.
       
-%Caso 4: Detonador = Si, Carga = No , ColocacionCargaPendiente = SI
+%Caso 4: Detonador = Si, Carga = No , ColocacionCargaPendiente = SI => tengo que buscar la carga, dejarla en su ubicacion e ir al sitio de detonacion.
 calcularHeuristica([[X,Y],_,ListaItems,_,si],Valor):-
     member([d,_,_],ListaItems),
     not(member([c,_],ListaItems)),
@@ -64,33 +61,35 @@ calcularHeuristica([[X,Y],_,ListaItems,_,si],Valor):-
     calcular_mejor_sitioDetonacion([Xu,Yu],CostoIrSitDet),
     Valor is DistCarga + DistDejarCarga + CostoIrSitDet.
 
-% Detonador = NO - Carga = SI - ColocacionCargaPendiente = SI
+% Caso 5: Detonador = NO - Carga = SI - ColocacionCargaPendiente = SI
 calcularHeuristica([[X,Y],_,ListaItems,_,si],Valor):-
     not(member([d,_,_],ListaItems)),
     member([c,_],ListaItems),
     estaEn([d,_,_],[Xd,Yd]),
     ubicacionCarga([Xu,Yu]),
-    distanciaManhattam([X,Y],[Xd,Yd],DistDetonador),
     %Calculo la distancia desde donde fui a buscar el detonador hasta donde debo dejar la carga
+    distanciaManhattam([X,Y],[Xd,Yd],DistDetonador),
     distanciaManhattam([Xd,Yd],[Xu,Yu],DistDetoDejarCarga),
-    DetoDejarCarga is DistDetonador + DistDetoDejarCarga,
-    distanciaManhattam([X,Y],[Xu,Yu],DistDejarCarga),
+    calcular_mejor_sitioDetonacion([Xu,Yu],DetonoA),
+    DetoDejarCarga is DistDetonador + DistDetoDejarCarga + DetonoA,
     %Calculo la distancia desde donde fui a dejar la carga hasta donde debo ir a buscar el detonador
+    distanciaManhattam([X,Y],[Xu,Yu],DistDejarCarga),
     distanciaManhattam([Xu,Yu],[Xd,Yd],DistDejarCargaDeto),
-    DejarCargaDeto is DistDejarCarga + DistDejarCargaDeto
+    calcular_mejor_sitioDetonacion([Xd,Yd],DetonoB),
+    DejarCargaDeto is DistDejarCarga + DistDejarCargaDeto + DetonoB,
+    %El menor de los dos recorridos es el correcto
+    Valor is min(DetoDejarCarga,DejarCargaDeto).
     
 
 %Caso 6: Detonador = NO, Carga = No, ColocacionCargaPendiente = SI 
 calcularHeuristica([[X,Y],_,ListaItems,_,si],Valor):-
-        not(member([d,_,_],ListaItems)),
-        not(member([c,_],ListaItems)),
-        estaEn([c,_], [Xc,Yc]),
-        estaEn([d,_,_],[Xd,Yd]),
-        distanciaManhattam([X,Y],[Xc,Yc],DistCarga),
-        distanciaManhattam([X,Y],[Xd,Yd],DistDetonador),
-       %calcularHeuristica([[Xc,Yc],_,ListaItems,_,si],HeuristicaCarga),
-        %calcularHeuristica([[Xd,Yd],_,ListaItems,_,si],HeuristicaDetonador),
-        Valor is min(DistCarga+HeuristicaCarga,DistDetonador+HeuristicaDetonador).
+    not(member([d,_,_],ListaItems)),
+    not(member([c,_],ListaItems)),
+    estaEn([c,_], [Xc,Yc]),
+    estaEn([d,_,_],[Xd,Yd]),       
+    distanciaManhattam([X,Y],[Xc,Yc],DistCarga),
+    distanciaManhattam([X,Y],[Xd,Yd],DistDetonador),
+    Valor is DistCarga + DistDetonador.
 
 
 %Calcula la distancia de manhattam desde la primer posicion a la segunda.
