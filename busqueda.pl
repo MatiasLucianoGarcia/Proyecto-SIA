@@ -8,14 +8,16 @@ generar_vecinos(Nodo,Vecinos):-
     Nodo=[Estado,Camino,Costo,_],
     Estado=[_,_,_,CostoEstado,_],
     Costo is CostoEstado,
-    findall([EstadoSiguente,[Operacion|Camino],CostoEstadoNuevo], realizar_operacion(EstadoActual,EstadoSiguente,Operacion), Vecinos),
-    EstadoActual=[_,_,_,CostoEstadoNuevo,_,_].
+    findall([[Pos,PuntoCardinal,ListaItems,CostoEstadoNuevo,ColocacionCargaPendiente],[Operacion|Camino],CostoEstadoNuevo], realizar_operacion(Estado,[Pos,PuntoCardinal,ListaItems,CostoEstadoNuevo,ColocacionCargaPendiente],Operacion), Vecinos).
 
 
 %buscar_plan(+EInicial,-Plan,-Destino,-Costo):
 buscar_plan(EInicial,Plan,Destino,Costo):-
-    NodoInicial=[EInicial,[],0,0],
-    frontera(NodoInicial),
+    limpiarPred(),
+    EInicial=[Pos,Car,It,C],
+    ECascara=[Pos,Car,It,0,C],
+    NodoInicial=[ECascara,[],0,0],
+    asserta(frontera(NodoInicial)),
     aEstrella(NodoM),
     NodoM = [EstadoM,CaminoM,Costo,_],
     EstadoM=[Destino,_,_,_,_],
@@ -38,15 +40,38 @@ agregar_vecinos([X|ListaVecinos]):-
     calcularHeuristica(Estado,CostoH),
     CostoT is CostoH+Costo,
     N=[Estado,Camino,Costo,CostoT],
-    asserta(frontera(N)),
+    asserta(frontera(N,CostoH)),
     agregar_vecinos(ListaVecinos). 
 
+%obtener_minimo_frontera(MinimoNodo):-
+ %   N1 = [_,_,_,Costo1],
+  %  N2 = [_,_,_,Costo2],
+   % frontera(N1),
+    %forall(frontera(N2),Costo1=<Costo2),
+    %MinimoNodo is N1. 
+
 obtener_minimo_frontera(MinimoNodo):-
-    N1 = [_,_,_,Costo1],
-    N2 = [_,_,_,Costo2],
-    frontera(N1),
-    forall(frontera(N2),Costo1=<Costo2),
-    MinimoNodo is N1. 
+    findall(Nodo,frontera(Nodo),ListaNodosFrontera),
+    minimo(MinimoNodo,ListaNodosFrontera). 
+
+minimo(Nodo,[X|ListaNodos]):-
+    minimo2(Nodo,X,ListaNodos).
+
+minimo2(Nodo,Nodo,[]):-!.
+
+minimo2(Nodo1,Nodo2,[Nodo3|ListaNodos]):-
+    Nodo1= [_,_,_,Costo1],
+    Nodo2= [_,_,_,Costo2],
+    Costo1=<Costo2,
+    !,
+    minimo2(Nodo1,Nodo3,ListaNodos).
+
+minimo2(Nodo1,Nodo2,[Nodo3|ListaNodos]):-
+    Nodo3 = [_,_,_,Costo3],
+    Nodo2 = [_,_,_,Costo2],
+    Costo3>=Costo2,
+    minimo2(Nodo1,Nodo2,ListaNodos).
+
 
 %Caso Base aEstrella:  Saco el minimo nodo y si es meta lo agrego al camino y  
 aEstrella(Nodo):-
@@ -65,7 +90,7 @@ aEstrella(Nodo):-
 esMeta(Nodo):-
     Nodo=[Estado,_,_,_],
     Estado=[[X,Y],_,ListaItems,_,no],
-    member([d,_,si],ListaItems),
+    member([d,_,_],ListaItems),
     sitioDetonacion([X,Y]).
 
 
@@ -170,12 +195,14 @@ distanciaManhattam([X,Y],[Xs,Ys],Valor):-
 
 calcular_mejor_sitioDetonacion([X,Y],Valor):-
     sitioDetonacion([Xs,Ys]),
-    forall(sitioDetonacion([Xn,Yn]),esMenorDistancia([X,Y],[Xs,Ys],[Xn,Yn],Valor)).
+    distanciaManhattam([X,Y],[Xs,Ys],Valor),
+    forall(sitioDetonacion([Xn,Yn]),esMenorDistancia([X,Y],[Xs,Ys],[Xn,Yn])).
 
-esMenorDistancia([X,Y],[Xs,Ys],[Xn,Yn],ValorIS):-
+esMenorDistancia([X,Y],[Xs,Ys],[Xn,Yn]):-
     ValorIS is abs(X-Xs) + abs(Y-Ys),
     ValorIN is abs(X-Xn) + abs(Y-Yn),
     ValorIS =< ValorIN. 
 
-
-
+limpiarPred():-
+    retractall(frontera(_)),
+    retractall(visitados(_)).

@@ -50,7 +50,6 @@ rotar([[X,Y],PuntoCardinal,ListaItems,Costo,ColocacionCargaPendiente],[[X,Y],Dir
 
 %saltar(+Estado,-EstadoFinal):
 saltar([[X,Y],PuntoCardinal,ListaItems,Costo,ColocacionCargaPendiente],[[Xn,Yn],PuntoCardinal,ListaItems,CostoFinal,ColocacionCargaPendiente]):-
-    trace,
     mover_direccion_correspondiente([X,Y],[Xs,Ys],PuntoCardinal),
     estaEn([v,_,Altura],[Xs,Ys]),
     Altura<4,
