@@ -13,9 +13,24 @@ generar_vecinos(Nodo,Vecinos):-
 
 
 %buscar_plan(+EInicial,-Plan,-Destino,-Costo):
+buscar_plan(EInicial,Plan,Destino,Costo):-
+    NodoInicial=[EInicial,[],0,0],
+    frontera(NodoInicial),
+    aEstrella(NodoM),
+    NodoM = [EstadoM,CaminoM,Costo,_],
+    EstadoM=[Destino,_,_,_,_],
+    reverse(CaminoM,Plan).
+
+buscar_plan(_,_,_,_,_):-
+	writeln('No se encontro plan.'),
+	fail.
 
 agregar_vecinos([]):-!.
 
+agregar_vecinos([X|ListaVecinos]):-
+    visitados(X),
+    agregar_vecinos(ListaVecinos).
+    
 agregar_vecinos([X|ListaVecinos]):-
     not(visitados(X)),
     asserta(visitados(X)),
@@ -34,15 +49,17 @@ obtener_minimo_frontera(MinimoNodo):-
     MinimoNodo is N1. 
 
 %Caso Base aEstrella:  Saco el minimo nodo y si es meta lo agrego al camino y  
-%aEstrella(Costo):-
- %   obtener_minimo_frontera(Estado),
-  %  esMeta(Estado),!.
+aEstrella(Nodo):-
+    obtener_minimo_frontera(Nodo),
+    esMeta(Nodo).
 
-%aEstrella(Costo):-
- %   obtener_minimo_frontera(Estado),
-  %  generar_vecinos(Estado,Vecinos),
-   % agregar_vecinos(Vecinos),
-    %aEstrella(Costo).     
+aEstrella(Nodo):-
+    obtener_minimo_frontera(NodoMinimo),
+    not(esMeta(NodoMinimo)),
+    generar_vecinos(NodoMinimo,Vecinos),
+    retract(frontera(NodoMinimo)),
+    agregar_vecinos(Vecinos),
+    aEstrella(Nodo).     
 
 %Define si el estado es un estado meta
 esMeta(Nodo):-
@@ -110,16 +127,41 @@ calcularHeuristica([[X,Y],_,ListaItems,_,si],Valor):-
     
 
 %Caso 6: Detonador = NO, Carga = No, ColocacionCargaPendiente = SI 
-%Caso A: Busco  
-%calcularHeuristica([[X,Y],_,ListaItems,_,si],Valor):-
-    %not(member([d,_,_],ListaItems)),
-    %not(member([c,_],ListaItems)),
-    %estaEn([c,_], [Xc,Yc]),
-    %estaEn([d,_,_],[Xd,Yd]),       
-    %distanciaManhattam([X,Y],[Xd,Yd],DistDetonador),
-    %distanciaManhattam([Xd,Yd],[Xc,Yc],DistDetoCarga),
-    %calcular_mejor_sitioDetonacion([Xc,Yc],DistDetoCargaDetonar),
-    %CasoA is DistDetonador + DistDetoCarga + DistDetoCargaDetonar
+%Caso A: Busco primero el Detonador, luego la carga y realizo la detonacion.
+%Caso B: Busco primero la carga
+calcularHeuristica([[X,Y],_,ListaItems,_,si],Valor):-
+    not(member([d,_,_],ListaItems)),
+    not(member([c,_],ListaItems)),
+    estaEn([c,_], [Xc,Yc]),
+    estaEn([d,_,_],[Xd,Yd]),
+    ubicacionCarga([Xu,Yu]),
+    %Caso A      
+    %Busco el detonador primero 
+    distanciaManhattam([X,Y],[Xd,Yd],DistDetonador),
+    %Solo puedo ir a buscar la carga
+    distanciaManhattam([Xd,Yd],[Xc,Yc],DistDetoCarga),
+    %Solo puedo ir a dejar la carga en su unicacion
+    distanciaManhattam([Xc,Yc],[Xu,Yu],DistDetoCargaUbi),
+    %Detono en el sitio mas cercano 
+    calcular_mejor_sitioDetonacion([Xu,Yu],DistDetoCargaDetonar),
+    CasoA is DistDetonador + DistDetoCarga + DistDetoCargaDetonar + DistDetoCargaUbi,
+    %Caso B
+    %Busco la carga primero
+    distanciaManhattam([X,Y],[Xc,Yc],DistCarga),
+    %Tengo dos opciones dejar la carga o buscar detonador
+    %Caso B-1 en este caso dejo la carga primero
+    distanciaManhattam([Xc,Yc],[Xu,Yu],DistCargaDejarCarga),
+    distanciaManhattam([Xu,Yu],[Xd,Yd],DistCargaDejarCargaDeto),
+    calcular_mejor_sitioDetonacion([Xd,Yd],DistCargaDejarCargaDetoDetonar),
+    B1 is DistCargaDejarCargaDetoDetonar + DistCargaDejarCargaDeto + DistCargaDejarCarga,
+    %Caso B-2 en este caso busco el detonador primero
+    distanciaManhattam([Xc,Yc],[Xd,Yd],DistCargaDeto),
+    distanciaManhattam([Xd,Yd],[Xu,Yu],DistCargaDetoDejarCarga),
+    calcular_mejor_sitioDetonacion([Xu,Yu],DistCargaDetoDejarCargaDetonar),
+    B2 is DistCargaDetoDejarCargaDetonar +DistCargaDetoDejarCarga + DistCargaDeto,
+    CasoB is min(B1,B2) + DistCarga,
+    Valor is min(CasoA,CasoB).  
+
 
 %Calcula la distancia de manhattam desde la primer posicion a la segunda.
 %alcularDistanciaManhattam(+PosInicial,+PosDestino,-Valor):
