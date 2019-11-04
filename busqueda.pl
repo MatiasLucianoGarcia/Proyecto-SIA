@@ -30,17 +30,18 @@ buscar_plan(_,_,_,_,_):-
 agregar_vecinos([]):-!.
 
 agregar_vecinos([X|ListaVecinos]):-
-    visitados(X),
+    X=[Estado,_,_],
+    visitados(Estado),
     agregar_vecinos(ListaVecinos).
     
 agregar_vecinos([X|ListaVecinos]):-
-    not(visitados(X)),
-    asserta(visitados(X)),
     X=[Estado,Camino,Costo],
+    not(visitados(Estado)),
+    asserta(visitados(Estado)),
     calcularHeuristica(Estado,CostoH),
-    CostoT is CostoH+Costo,
+    CostoT is CostoH *2  +Costo,
     N=[Estado,Camino,Costo,CostoT],
-    asserta(frontera(N,CostoH)),
+    asserta(frontera(N)),
     agregar_vecinos(ListaVecinos). 
 
 %obtener_minimo_frontera(MinimoNodo):-
@@ -60,17 +61,17 @@ minimo(Nodo,[X|ListaNodos]):-
 minimo2(Nodo,Nodo,[]):-!.
 
 minimo2(Nodo1,Nodo2,[Nodo3|ListaNodos]):-
-    Nodo1= [_,_,_,Costo1],
     Nodo2= [_,_,_,Costo2],
-    Costo1=<Costo2,
+    Nodo3= [_,_,_,Costo3],
+    Costo2=<Costo3,
     !,
-    minimo2(Nodo1,Nodo3,ListaNodos).
+    minimo2(Nodo1,Nodo2,ListaNodos).
 
 minimo2(Nodo1,Nodo2,[Nodo3|ListaNodos]):-
-    Nodo3 = [_,_,_,Costo3],
     Nodo2 = [_,_,_,Costo2],
-    Costo3>=Costo2,
-    minimo2(Nodo1,Nodo2,ListaNodos).
+    Nodo3 = [_,_,_,Costo3],
+    Costo3=<Costo2,
+    minimo2(Nodo1,Nodo3,ListaNodos).
 
 
 %Caso Base aEstrella:  Saco el minimo nodo y si es meta lo agrego al camino y  
@@ -80,7 +81,7 @@ aEstrella(Nodo):-
 
 aEstrella(Nodo):-
     obtener_minimo_frontera(NodoMinimo),
-    not(esMeta(NodoMinimo)),
+    writeln(NodoMinimo),
     generar_vecinos(NodoMinimo,Vecinos),
     retract(frontera(NodoMinimo)),
     agregar_vecinos(Vecinos),
@@ -193,15 +194,36 @@ calcularHeuristica([[X,Y],_,ListaItems,_,si],Valor):-
 distanciaManhattam([X,Y],[Xs,Ys],Valor):-
     Valor is abs(X-Xs) + abs(Y-Ys).
 
-calcular_mejor_sitioDetonacion([X,Y],Valor):-
-    sitioDetonacion([Xs,Ys]),
-    distanciaManhattam([X,Y],[Xs,Ys],Valor),
-    forall(sitioDetonacion([Xn,Yn]),esMenorDistancia([X,Y],[Xs,Ys],[Xn,Yn])).
+%calcular_mejor_sitioDetonacion([X,Y],Valor):-
+ %   sitioDetonacion([Xs,Ys]),
+  %  distanciaManhattam([X,Y],[Xs,Ys],Valor),
+   % forall(sitioDetonacion([Xn,Yn]),esMenorDistancia([X,Y],[Xs,Ys],[Xn,Yn])).
 
-esMenorDistancia([X,Y],[Xs,Ys],[Xn,Yn]):-
-    ValorIS is abs(X-Xs) + abs(Y-Ys),
-    ValorIN is abs(X-Xn) + abs(Y-Yn),
-    ValorIS =< ValorIN. 
+%esMenorDistancia([X,Y],[Xs,Ys],[Xn,Yn]):-
+ %   ValorIS is abs(X-Xs) + abs(Y-Ys),
+  %  ValorIN is abs(X-Xn) + abs(Y-Yn),
+   % ValorIS =< ValorIN. 
+
+calcular_mejor_sitioDetonacion([X,Y],Valor):-
+    findall(Dist,calcularDistanciaSitioDetonacion([X,Y],Dist),ListaDistancias),
+    obtenerMinimo(ListaDistancias,Valor).
+
+calcularDistanciaSitioDetonacion([X,Y],Distancia):-
+    sitioDetonacion([Xa,Ya]),
+    distanciaManhattam([X,Y],[Xa,Ya],Distancia).
+
+obtenerMinimo([Minimo], Minimo).
+
+obtenerMinimo([H,K|T], Minimo):-
+    H =< K,
+    obtenerMinimo([H|T], Minimo).
+
+obtenerMinimo([H,K|T], Minimo):-
+    H > K,
+    obtenerMinimo([K|T],Minimo).
+
+%minimo_camino([X1,Y1],[[X2,Y2]|Lista],Valor):-
+ %   distanciaManhattam()
 
 limpiarPred():-
     retractall(frontera(_)),
